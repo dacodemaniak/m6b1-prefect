@@ -1,0 +1,31 @@
+services:
+  prefect-server:
+    image: prefecthq/prefect:2-latest
+    container_name: prefect-server
+    command: ["prefect", "server", "start", "--host", "0.0.0.0", "--port", "4200"]
+    ports:
+      - "4200:4200"
+    environment:
+      - PREFECT_HOME=/prefect
+    volumes:
+      - prefect-data:/prefect
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:4200/api/health').read(); print('ok')\""]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 20s
+    restart: unless-stopped
+
+  flow:
+    build: .
+    container_name: random-check-flow
+    depends_on:
+      prefect-server:
+        condition: service_healthy
+    environment:
+      - PREFECT_API_URL=http://prefect-server:4200/api
+    restart: "no"
+
+volumes:
+  prefect-data:
