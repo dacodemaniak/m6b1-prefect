@@ -8,16 +8,16 @@ def check_random() -> None:
     value = random.randint(0, 1)
     logger.info(f"Generated value: {value}")
     if value < 0.5:
-        logger.warning("Value is less than 0.5, retrain is required.")
+        logger.critical("Value is less than 0.5, retrain is required.")
         raise ValueError("Value is less than 0.5, retrying...")
     logger.info("Value is acceptable.")
 
-@flow
+@flow(name="periodic_check_flow")
 def periodic_check() -> None:
     check_random()
 
 if __name__ == "__main__":
     periodic_check.serve(
-        name="every_10s",
-        interval=10,
+        name="every_30s",
+        interval=30,
     )
