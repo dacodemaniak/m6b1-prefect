@@ -8,22 +8,21 @@ import os
 from pathlib import Path
 from loguru import logger
 import pandas as pd
-
+from api.config import settings
 
 app = FastAPI()
 
 # Configuration du modèle
-BASE_PATH = Path(__file__).resolve().parent.parent
 
-MODEL_PATH = BASE_PATH / 'models' / 'model_mnist.keras'
+MODEL_PATH = settings.BASE_PATH / settings.MODEL_PATH
 model = tf.keras.models.load_model(str(MODEL_PATH))
 
 # Configure logging
-LOG_PATH = BASE_PATH / 'logs' / 'api.log'
+LOG_PATH = settings.BASE_PATH / 'logs' / 'api.log'
 logger.add(str(LOG_PATH), rotation="1 MB", retention="1 days", level="DEBUG")
 
 
-DATABASE_PATH = BASE_PATH / 'prefect-data' / 'mnist_data.db'
+DATABASE_PATH = settings.BASE_PATH / settings.DB_PATH
 class PredictionInput(BaseModel):
     image: list # Liste de listes (28x28) ou liste aplatie (784)
 
@@ -39,6 +38,11 @@ def reload_model():
         model = tf.keras.models.load_model(str(MODEL_PATH))
         logger.info(f"Modèle chargé avec succès depuis {MODEL_PATH}")
 
+@app.on_event("startup")
+async def startup_event():
+    logger.info(f"Démarrage de l'API sur le port {settings.API_PORT}")
+    logger.info(f"Base de données : {DATABASE_PATH}")
+    
 @app.post("/predict")
 async def predict(data: PredictionInput):
     logger.debug("Requête reçue sur /predict")

@@ -7,12 +7,13 @@ from loguru import logger
 from pathlib import Path
 import plotly.express as px
 import pandas as pd
+from api.config import settings
 
 # Configuration
-API_URL = "http://localhost:8000"
+API_URL = settings.API_URL
 
-BASE_PATH = Path(__file__).resolve().parent.parent
-LOG_PATH = BASE_PATH / 'logs' / 'app.log'
+
+LOG_PATH = settings.BASE_PATH / 'logs' / 'app.log'
 logger.add(str(LOG_PATH), rotation="1 MB", retention="1 days", level="DEBUG")
 
 st.set_page_config(page_title="MNIST Recog & Feedback", layout="centered")
