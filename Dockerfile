@@ -1,6 +1,27 @@
-FROM prefecthq/prefect:2-latest 
+# Dockerfile
+FROM python:3.10-slim
 
 WORKDIR /app
-COPY flow.py /app/flow.py
 
-CMD ["python", "/app/flow.py"]
+# Installation des dépendances système pour OpenCV
+RUN apt-get update && apt-get install -y \
+    libgl1-mesa-glx \
+    libglib2.0-0 \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copie de l'intégralité du projet
+COPY . .
+
+RUN pytest tests/
+
+# Droits d'exécution pour le script de démarrage
+RUN chmod +x scripts/start_worker.sh
+
+# Création des répertoires pour les volumes
+RUN mkdir -p models prefect-data logs
+
+# Le port par défaut (sera surchargé par docker-compose)
+EXPOSE 8000

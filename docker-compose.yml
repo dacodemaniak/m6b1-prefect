@@ -1,31 +1,73 @@
+# docker-compose.yml
 services:
+  # Service de setup : Initialise la DB et le modèle V0
+  bootstrap:
+    build: .
+    volumes:
+      - ./models:/app/models
+      - ./prefect-data:/app/prefect-data
+    command: >
+      sh -c "python scripts/sqlite_init.py && python scripts/train_and_save.py"
+
+  api:
+    build: .
+    container_name: mnist_api
+    env_file: .env
+    environment:
+      - API_URL=http://api:${API_PORT:-8000}
+    ports:
+      - "${API_PORT:-8000}:${API_PORT:-8000}"
+    volumes:
+      - ./models:/app/models
+      - ./prefect-data:/app/prefect-data
+    networks:
+      - mnist-net
+
+  ihm:
+    build: .
+    container_name: mnist_ihm
+    env_file: .env
+    environment:
+      - API_URL=http://api:${API_PORT:-8000}
+    ports:
+      - "${IHM_PORT:-8501}:${IHM_PORT:-8501}"
+    depends_on:
+      - api
+    networks:
+      - mnist-net
+
   prefect-server:
     image: prefecthq/prefect:2-latest
     container_name: prefect-server
-    command: ["prefect", "server", "start", "--host", "0.0.0.0", "--port", "4200"]
     ports:
       - "4200:4200"
+    command: ["prefect", "server", "start", "--host", "0.0.0.0"]
     environment:
       - PREFECT_HOME=/prefect
     volumes:
       - prefect-data:/prefect
-    healthcheck:
-      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:4200/api/health').read(); print('ok')\""]
-      interval: 10s
-      timeout: 5s
-      retries: 15
-      start_period: 20s
-    restart: unless-stopped
 
-  flow:
+  prefect-worker:
     build: .
-    container_name: random-check-flow
+    container_name: prefect_worker
     depends_on:
       prefect-server:
         condition: service_healthy
+      api:
+        condition: service_started
+    env_file: .env
     environment:
       - PREFECT_API_URL=http://prefect-server:4200/api
-    restart: "no"
-
+    volumes:
+      - ./models:/app/models
+      - ./prefect-data:/app/prefect-data
+      - ./logs:/app/logs
+    entrypoint: ["/bin/bash", "scripts/start_worker.sh"]
+    networks:
+      - mnist-net
 volumes:
   prefect-data:
+
+networks:
+  mnist-net:
+    driver: bridge

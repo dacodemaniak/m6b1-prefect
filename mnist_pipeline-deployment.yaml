@@ -1,0 +1,27 @@
+# Configuration du déploiement Prefect
+name: Hourly-Retrain
+description: "Réentraînement automatique du modèle MNIST avec Optuna et gestion du replay buffer."
+version: 1.0.0
+
+# Référence vers le flow dans votre code
+entrypoint: scripts/train_pipeline.py:mnist_pipeline
+
+# Work Pool configuré dans votre docker-compose
+work_pool:
+  name: default-agent-pool
+  work_queue_name: default
+
+# Programmation : Toutes les heures
+schedule:
+  interval: 3600
+  timezone: UTC
+
+# Paramètres par défaut passés à la fonction mnist_pipeline()
+parameters:
+  min_new_data_threshold: 10
+  replay_sample_size: 2000
+
+# Infrastructure & Stockage (Local car tout est dans le même volume Docker)
+storage: null
+path: /app
+working_dir: /app
