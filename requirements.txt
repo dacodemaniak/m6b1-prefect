@@ -9,3 +9,4 @@ tensorflow
 opencv-python
 pandas
 plotly
+pytest
