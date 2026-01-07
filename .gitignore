@@ -1,3 +1,11 @@
 # Prefect data
-prefect_data/
-!prefect_data/.gitkeep
+prefect-data/
+!prefect-data/.gitkeep
+
+# Logs
+logs/
+!logs/.gitkeep
+
+# Cache
+__pycache__/
+*.pyc

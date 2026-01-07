@@ -1,1 +1,11 @@
 prefect
+optuna
+streamlit_drawable_canvas
+requests
+fastapi
+uvicorn
+pydantic
+tensorflow
+opencv-python
+pandas
+plotly

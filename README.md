@@ -47,3 +47,50 @@ A containered version is available :
 ```
 docker compose up -d
 ```
+
+[UPDATE - 2026-01-07]
+
+## First model training
+
+```shell
+python ./scripts/train_and_save.py
+```
+
+**Run only once** just build a simple MNIST Keras model ready for improvement
+
+## Generate sqlite database
+
+```shell
+python ./scripts/sqlite_init.py
+```
+
+It will generate a simple table to log corrections.
+
+## Mount API and IHM
+
+```shell
+uvicorn api.main:app --reload --port 8000
+```
+API will listen on http://127.0.0.1:8000
+
+```shell
+streamlit run ihm/app.py
+```
+
+IHM will exposed on default streamlit port
+
+## Retrain orchestration
+
+```shell
+# Prefect server
+prefect server start
+
+# Local deployment
+prefect deployment build scripts/train_pipeline.py:mnist_retraining_flow -n "Hourly-Retrain" --interval 3600
+
+# Apply deployment
+prefect deployment apply mnist_retraining_flow-deployment.yaml
+
+# Launch agent
+prefect worker start --pool 'default-agent-pool'
+
