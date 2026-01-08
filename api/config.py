@@ -1,4 +1,4 @@
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from pathlib import Path
 
 class Settings(BaseSettings):
@@ -14,7 +14,9 @@ class Settings(BaseSettings):
     MODEL_PATH: str = "models/model_mnist.keras"
     DB_PATH: str = "prefect-data/mnist_data.db"
     
-    class Config:
-        env_file = ".env"
+    model_config = SettingsConfigDict(
+        env_file = ".env",
+        env_file_encoding = "utf-8"
+    )
 
 settings = Settings()

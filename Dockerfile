@@ -1,11 +1,11 @@
 # Dockerfile
-FROM python:3.10-slim
+FROM python:3.13-slim
 
 WORKDIR /app
 
 # Installation des dépendances système pour OpenCV
 RUN apt-get update && apt-get install -y \
-    libgl1-mesa-glx \
+    libgl1 \
     libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
@@ -15,6 +15,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copie de l'intégralité du projet
 COPY . .
 
+# Définir le PYTHONPATH pour que pytest trouve le module 'api'
+ENV PYTHONPATH=/app
+
+# Exécution des tests pour valider l'image
 RUN pytest tests/
 
 # Droits d'exécution pour le script de démarrage

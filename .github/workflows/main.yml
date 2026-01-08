@@ -35,6 +35,8 @@ jobs:
           prefect deployment validate mnist_pipeline-deployment.yaml
 
       - name: Run Pytest
+        env:
+            PYTHONPATH: ${{ github.workspace }}
         run: |
           export PYTHONPATH=$PYTHONPATH:.
           pytest tests/test_api.py

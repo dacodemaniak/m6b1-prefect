@@ -9,10 +9,12 @@ from pathlib import Path
 client = TestClient(app)
 
 # Configuration d'une base de données de test temporaire
-TEST_DB = Path("prefect-data/test_mnist_data.db")
+TEST_DB = Path(__file__).resolve().parent.parent / "prefect-data" / "test_mnist_data.db"
 
-@pytest.fixture(autocmd=True)
+@pytest.fixture(autouse=True)
 def setup_test_db():
+    TEST_DB.parent.mkdir(parents=True, exist_ok=True)
+
     """Prépare une base propre avant chaque test."""
     conn = sqlite3.connect(str(TEST_DB))
     conn.execute("DROP TABLE IF EXISTS corrections")
@@ -28,22 +30,30 @@ def setup_test_db():
     ''')
     conn.commit()
     conn.close()
+    
+    app.state.db_path = TEST_DB
+
+    with TestClient(app) as c:
+        yield c
+    
     # On force l'API à utiliser la base de test (si votre code le permet via settings)
-    yield
+    #yield
+
     if TEST_DB.exists():
         TEST_DB.unlink()
 
 # --- Scénario 1 : Réponse positive de l'API ---
 def test_predict_success():
-    # Simulation d'une image 28x28 (liste de listes)
-    fake_image = np.zeros((28, 28)).tolist()
-    response = client.post("/predict", json={"image": fake_image})
-    
-    assert response.status_code == 200
-    data = response.json()
-    assert "digit" in data
-    assert "confidence" in data
-    assert isinstance(data["digit"], int)
+    with TestClient(app) as client:
+        # Simulation d'une image 28x28 (liste de listes)
+        fake_image = np.zeros((28, 28)).tolist()
+        response = client.post("/predict", json={"image": fake_image})
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert "digit" in data
+        assert "confidence" in data
+        assert isinstance(data["digit"], int)
 
 # --- Scénario 2 : Réponse négative (Erreur de validation) ---
 def test_predict_bad_data():
@@ -55,24 +65,25 @@ def test_predict_bad_data():
 
 # --- Scénario 3 : Envoi d'une correction et stockage ---
 def test_improvement_storage():
-    fake_image = np.zeros((28, 28)).tolist()
-    payload = {
-        "image": fake_image,
-        "predicted_digit": 3,
-        "actual_digit": 5
-    }
-    
-    # Appel de l'API
-    response = client.post("/improvement", json=payload)
-    assert response.status_code == 200
-    
-    # Vérification directe dans la base de données
-    # Note : Assurez-vous que DATABASE_PATH dans main.py pointe vers TEST_DB ici
-    conn = sqlite3.connect(str(TEST_DB))
-    cursor = conn.cursor()
-    cursor.execute("SELECT actual_digit FROM corrections WHERE predicted_digit = 3")
-    row = cursor.fetchone()
-    conn.close()
-    
-    assert row is not None
-    assert row[0] == 5
+    with TestClient(app) as client:
+        fake_image = np.zeros((28, 28)).tolist()
+        payload = {
+            "image": fake_image,
+            "predicted_digit": 3,
+            "actual_digit": 5
+        }
+        
+        # Appel de l'API
+        response = client.post("/improvement", json=payload)
+        assert response.status_code == 200
+        
+        # Vérification directe dans la base de données
+        # Note : Assurez-vous que DATABASE_PATH dans main.py pointe vers TEST_DB ici
+        conn = sqlite3.connect(str(TEST_DB))
+        cursor = conn.cursor()
+        cursor.execute("SELECT actual_digit FROM corrections WHERE predicted_digit = 3")
+        row = cursor.fetchone()
+        conn.close()
+        
+        assert row is not None
+        assert row[0] == 5
